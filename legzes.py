@@ -5,6 +5,8 @@ import tkinter as tk
 from tkinter import messagebox
 import traceback
 
+#by lowkeyrenato
+
 # --- 1. Hibaellenőrzés: Függőség (customtkinter) megléte ---
 try:
     import customtkinter as ctk
