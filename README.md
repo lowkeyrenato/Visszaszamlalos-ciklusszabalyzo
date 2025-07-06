@@ -1,6 +1,6 @@
 # Box/Négyzet Légzésgyakorlat py app
 
-Ez egy Githubra szánt teszt py project
+Ez egy github-ra szánt teszt python project
 ---
 
 ## Főbb jellemzők
