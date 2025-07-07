@@ -14,7 +14,7 @@ Ez egy github-ra szánt teszt python project
 
 ---
 
-## Telepítés
+## Telepítés (Windows)
 
 1. Klónozd vagy töltsd le a repót:
 
