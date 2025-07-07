@@ -14,11 +14,12 @@ from threading import Thread
 # --- PLATFORMFÜGGETLEN HANGKEZELÉS KÜLSŐ FÁJL NÉLKÜL ---
 import io
 try:
-    import pygame
+    # Csak a szükséges részeket importáljuk a pygame-ből
+    from pygame import mixer, time, error as pygame_error
     # Azért inicializáljuk itt, hogy azonnal kiderüljön, ha valami gond van a hangrendszerrel.
-    pygame.mixer.init() 
+    mixer.init() 
     SOUND_AVAILABLE = True
-except (ImportError, pygame.error) as e:
+except (ImportError, pygame_error) as e:
     print(f"Figyelmeztetés: a pygame hangkezelő nem indítható el. A hang funkció nem elérhető. Hiba: {e}")
     SOUND_AVAILABLE = False
 
@@ -246,12 +247,12 @@ class BreathingApp:
             # Létrehozunk egy memóriabeli "fájlt" a WAV adatokból
             sound_file = io.BytesIO(WAV_DATA)
             # Betöltjük a hangot a memóriabeli fájlból
-            sound = pygame.mixer.Sound(file=sound_file)
+            sound = mixer.Sound(file=sound_file)
             # Lejátsszuk a hangot
             sound.play()
             # Várunk, amíg a hang lejátszása befejeződik, hogy a szál ne álljon le idő előtt.
-            while pygame.mixer.get_busy():
-                pygame.time.Clock().tick(10) # Alacsony CPU használatú várakozás
+            while mixer.get_busy():
+                time.Clock().tick(10) # Alacsony CPU használatú várakozás
         except Exception as e:
             # Ha a háttérben hiba történik, az ne állítsa le a programot.
             print(f"Hiba a hang lejátszása közben (a háttérben): {e}")
