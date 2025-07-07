@@ -7,9 +7,9 @@ import sys
 import tkinter as tk
 from tkinter import messagebox
 import traceback
-from threading import Thread # <<< ÚJ IMPORT: A párhuzamos futtatáshoz
+from threading import Thread
 
-# by lowkeyrenato
+# by lowkeyrenato w/ Gemini
 
 # --- MEGBÍZHATÓ HANGKEZELÉS KÜLSŐ FÁJL NÉLKÜL ---
 try:
@@ -24,7 +24,6 @@ WAV_DATA = b'RIFFb\x05\x00\x00WAVEfmt \x10\x00\x00\x00\x01\x00\x01\x00\x80>\x00\
 try:
     import customtkinter as ctk
 except ImportError:
-    # ... (hibakezelő kód változatlan)
     error_title = "Hiányzó Könyvtár"
     error_message = ("A program futtatásához szükséges 'customtkinter' könyvtár nincs telepítve.\n\nKérjük, telepítsd a következő paranccsal egy parancssorban:\n\npip install customtkinter")
     try:
@@ -42,7 +41,7 @@ class BreathingApp:
         self.master = master
         self.master.title("Box Légzésgyakorlat")
 
-        window_width, window_height = 450, 530
+        window_width, window_height = 450, 620 # <<< MÓDOSÍTÁS: Ablak magassága optimalizálva
         screen_width, screen_height = self.master.winfo_screenwidth(), self.master.winfo_screenheight()
         center_x, center_y = int(screen_width/2 - window_width / 2), int(screen_height/2 - window_height / 2)
         self.master.geometry(f'{window_width}x{window_height}+{center_x}+{center_y}')
@@ -55,6 +54,9 @@ class BreathingApp:
         self.time_left = 0
         self.topmost_var = tk.BooleanVar(value=False)
         self.sound_enabled_var = tk.BooleanVar(value=False)
+        
+        self.cycles_var = tk.IntVar(value=4)
+        self.duration_var = tk.IntVar(value=4)
 
         if not PHASES:
             messagebox.showerror("Konfigurációs Hiba", "A légzési fázisok (PHASES) listája üres!")
@@ -64,76 +66,192 @@ class BreathingApp:
         self.master.protocol("WM_DELETE_WINDOW", self.on_closing)
         self.create_widgets()
 
+        self.cycles_var.trace_add("write", self._update_entry_from_var)
+        self.duration_var.trace_add("write", self._update_entry_from_var)
+
+
     def create_widgets(self):
-        # A GUI elemek létrehozása változatlan
         self.master.grid_columnconfigure(0, weight=1)
+        
+        # --- BEÁLLÍTÁSOK SZEKCIÓ ---
         settings_frame = ctk.CTkFrame(self.master, fg_color="transparent")
         settings_frame.grid(row=0, column=0, padx=20, pady=(20, 10), sticky="ew")
         settings_frame.grid_columnconfigure((0, 1), weight=1)
-        ctk.CTkLabel(settings_frame, text="Ciklusok:", font=ctk.CTkFont(size=14)).grid(row=0, column=0, sticky='w')
-        self.cycles_var = tk.IntVar(value=4)
-        ctk.CTkLabel(settings_frame, textvariable=self.cycles_var, font=ctk.CTkFont(size=14, weight="bold")).grid(row=0, column=0, sticky='e', padx=10)
-        self.cycles_slider = ctk.CTkSlider(settings_frame, from_=1, to=20, number_of_steps=19, variable=self.cycles_var)
-        self.cycles_slider.grid(row=1, column=0, padx=(0, 10), pady=(5, 10), sticky="ew")
-        ctk.CTkLabel(settings_frame, text="Időtartam (mp):", font=ctk.CTkFont(size=14)).grid(row=0, column=1, sticky='w', padx=(10, 0))
-        self.duration_var = tk.IntVar(value=4)
-        ctk.CTkLabel(settings_frame, textvariable=self.duration_var, font=ctk.CTkFont(size=14, weight="bold")).grid(row=0, column=1, sticky='e', padx=10)
-        self.duration_slider = ctk.CTkSlider(settings_frame, from_=2, to=10, number_of_steps=8, variable=self.duration_var)
-        self.duration_slider.grid(row=1, column=1, padx=(10, 0), pady=(5, 10), sticky="ew")
-        self.topmost_checkbox = ctk.CTkCheckBox(settings_frame, text="Mindig felül", variable=self.topmost_var, onvalue=True, offvalue=False, command=self.toggle_topmost, font=ctk.CTkFont(size=12))
-        self.topmost_checkbox.grid(row=2, column=0, columnspan=2, pady=(10, 0), sticky="w")
-        self.sound_switch = ctk.CTkSwitch(settings_frame, text="Hangjelzés", variable=self.sound_enabled_var, onvalue=True, offvalue=False, font=ctk.CTkFont(size=12))
-        self.sound_switch.grid(row=3, column=0, columnspan=2, pady=(10, 0), sticky="w")
+
+        # --- CIKLUSOK BEÁLLÍTÁSA ---
+        cycles_frame = ctk.CTkFrame(settings_frame, fg_color="transparent")
+        cycles_frame.grid(row=0, column=0, padx=(0, 10), sticky="nsew")
+        cycles_frame.grid_columnconfigure(0, weight=1)
+        
+        ctk.CTkLabel(cycles_frame, text="Ciklusok:", font=ctk.CTkFont(size=14)).grid(row=0, column=0, sticky='w')
+        
+        cycles_stepper_frame = ctk.CTkFrame(cycles_frame, fg_color="transparent")
+        cycles_stepper_frame.grid(row=1, column=0, pady=(5, 10), sticky="ew")
+        cycles_stepper_frame.grid_columnconfigure(1, weight=1)
+
+        minus_cycles_btn = ctk.CTkButton(cycles_stepper_frame, text="-", width=30, font=ctk.CTkFont(size=16, weight="bold"),
+                                         command=lambda: self._adjust_value(self.cycles_var, -1, min_val=1))
+        minus_cycles_btn.grid(row=0, column=0, padx=(0, 5))
+
+        self.cycles_entry = ctk.CTkEntry(cycles_stepper_frame, justify="center", font=ctk.CTkFont(size=14))
+        self.cycles_entry.grid(row=0, column=1, sticky="ew")
+        self.cycles_entry.insert(0, str(self.cycles_var.get()))
+        self.cycles_entry.bind("<Return>", lambda event: self._validate_and_update_from_entry(self.cycles_var, self.cycles_entry, min_val=1))
+        self.cycles_entry.bind("<FocusOut>", lambda event: self._validate_and_update_from_entry(self.cycles_var, self.cycles_entry, min_val=1))
+        
+        plus_cycles_btn = ctk.CTkButton(cycles_stepper_frame, text="+", width=30, font=ctk.CTkFont(size=16, weight="bold"),
+                                        command=lambda: self._adjust_value(self.cycles_var, 1, min_val=1))
+        plus_cycles_btn.grid(row=0, column=2, padx=(5, 0))
+
+        self.cycles_slider = ctk.CTkSlider(cycles_frame, from_=1, to=20, number_of_steps=19, variable=self.cycles_var)
+        self.cycles_slider.grid(row=2, column=0, sticky="ew")
+
+        # --- IDŐTARTAM BEÁLLÍTÁSA ---
+        duration_frame = ctk.CTkFrame(settings_frame, fg_color="transparent")
+        duration_frame.grid(row=0, column=1, padx=(10, 0), sticky="nsew")
+        duration_frame.grid_columnconfigure(0, weight=1)
+
+        ctk.CTkLabel(duration_frame, text="Időtartam (mp):", font=ctk.CTkFont(size=14)).grid(row=0, column=0, sticky='w')
+
+        duration_stepper_frame = ctk.CTkFrame(duration_frame, fg_color="transparent")
+        duration_stepper_frame.grid(row=1, column=0, pady=(5, 10), sticky="ew")
+        duration_stepper_frame.grid_columnconfigure(1, weight=1)
+
+        minus_duration_btn = ctk.CTkButton(duration_stepper_frame, text="-", width=30, font=ctk.CTkFont(size=16, weight="bold"),
+                                          command=lambda: self._adjust_value(self.duration_var, -1, min_val=1))
+        minus_duration_btn.grid(row=0, column=0, padx=(0, 5))
+
+        self.duration_entry = ctk.CTkEntry(duration_stepper_frame, justify="center", font=ctk.CTkFont(size=14))
+        self.duration_entry.grid(row=0, column=1, sticky="ew")
+        self.duration_entry.insert(0, str(self.duration_var.get()))
+        self.duration_entry.bind("<Return>", lambda event: self._validate_and_update_from_entry(self.duration_var, self.duration_entry, min_val=1))
+        self.duration_entry.bind("<FocusOut>", lambda event: self._validate_and_update_from_entry(self.duration_var, self.duration_entry, min_val=1))
+
+        plus_duration_btn = ctk.CTkButton(duration_stepper_frame, text="+", width=30, font=ctk.CTkFont(size=16, weight="bold"),
+                                         command=lambda: self._adjust_value(self.duration_var, 1, min_val=1))
+        plus_duration_btn.grid(row=0, column=2, padx=(5, 0))
+
+        self.duration_slider = ctk.CTkSlider(duration_frame, from_=2, to=10, number_of_steps=8, variable=self.duration_var)
+        self.duration_slider.grid(row=2, column=0, sticky="ew")
+        
+        # --- EGYÉB BEÁLLÍTÁSOK ---
+        # <<< MÓDOSÍTÁS: A vezérlők egy sorba rendezése a jobb kinézetért
+        misc_settings_frame = ctk.CTkFrame(self.master, fg_color="transparent")
+        misc_settings_frame.grid(row=1, column=0, padx=20, pady=(20, 0), sticky="ew")
+        misc_settings_frame.grid_columnconfigure(0, weight=1)
+
+        options_frame = ctk.CTkFrame(misc_settings_frame, fg_color="transparent")
+        options_frame.grid(row=0, column=0, sticky="ew")
+        options_frame.grid_columnconfigure((0, 1, 2), weight=1) # Oszlopok beállítása
+
+        self.topmost_checkbox = ctk.CTkCheckBox(options_frame, text="Mindig felül", variable=self.topmost_var, onvalue=True, offvalue=False, command=self.toggle_topmost, font=ctk.CTkFont(size=12))
+        self.topmost_checkbox.grid(row=0, column=0, sticky="w", padx=5) # Balra
+
+        self.reset_button = ctk.CTkButton(options_frame, text="Alaphelyzet",
+                                          command=self.reset_settings,
+                                          font=ctk.CTkFont(size=12),
+                                          width=100,
+                                          fg_color="#4C566A", hover_color="#5E81AC")
+        self.reset_button.grid(row=0, column=1, sticky="ew", padx=10) # Középre
+
+        self.sound_switch = ctk.CTkSwitch(options_frame, text="Hangjelzés", variable=self.sound_enabled_var, onvalue=True, offvalue=False, font=ctk.CTkFont(size=12))
+        self.sound_switch.grid(row=0, column=2, sticky="e", padx=5) # Jobbra
+        
         if not SOUND_AVAILABLE:
             self.sound_switch.configure(state="disabled")
-            ctk.CTkLabel(settings_frame, text="(Csak Windows rendszeren elérhető)", font=ctk.CTkFont(size=10)).grid(row=4, column=0, columnspan=2, sticky="w", padx=20)
+            # A figyelmeztető szöveg a 3-as oszlop alá kerül, így a switch alatt marad
+            ctk.CTkLabel(options_frame, text="(Csak Windows)", font=ctk.CTkFont(size=10)).grid(row=1, column=2, sticky="e", padx=5)
+
+
+        # --- FŐ KIJELZŐK ÉS GOMBOK ---
         self.cycle_label = ctk.CTkLabel(self.master, text="Nyomj Start-ot az indításhoz!", font=ctk.CTkFont(size=18, weight="bold"))
-        self.cycle_label.grid(row=1, column=0, padx=20, pady=(10, 5), sticky="ew")
+        self.cycle_label.grid(row=2, column=0, padx=20, pady=(20, 5), sticky="ew")
+
         self.status_label = ctk.CTkLabel(self.master, text="Készen állsz?", font=ctk.CTkFont(size=30))
-        self.status_label.grid(row=2, column=0, padx=20, pady=10, sticky="ew")
+        self.status_label.grid(row=3, column=0, padx=20, pady=10, sticky="ew")
+
         self.timer_label = ctk.CTkLabel(self.master, text="", font=ctk.CTkFont(size=96, weight="bold"), text_color="#5E81AC")
-        self.timer_label.grid(row=3, column=0, padx=20, pady=5, sticky="ew")
+        self.timer_label.grid(row=4, column=0, padx=20, pady=5, sticky="ew")
+
         button_frame = ctk.CTkFrame(self.master, fg_color="transparent")
-        button_frame.grid(row=4, column=0, padx=20, pady=(20, 20), sticky="ew")
+        button_frame.grid(row=5, column=0, padx=20, pady=(20, 20), sticky="ew")
         button_frame.grid_columnconfigure((0, 1), weight=1)
+
         self.start_button = ctk.CTkButton(button_frame, text="Start", command=self.start_exercise, height=40, font=ctk.CTkFont(size=14, weight="bold"))
         self.start_button.grid(row=0, column=0, padx=(0, 10), sticky="ew")
+        
         self.stop_button = ctk.CTkButton(button_frame, text="Stop", command=self.stop_exercise, state="disabled", height=40, fg_color="#D08770", hover_color="#BF616A", font=ctk.CTkFont(size=14, weight="bold"))
         self.stop_button.grid(row=0, column=1, padx=(10, 0), sticky="ew")
+        
+        self.control_widgets = [
+            self.cycles_slider, self.duration_slider, self.topmost_checkbox,
+            self.sound_switch, self.cycles_entry, self.duration_entry,
+            minus_cycles_btn, plus_cycles_btn, minus_duration_btn, plus_duration_btn,
+            self.reset_button # <<< MÓDOSÍTÁS: Hozzáadva a listához
+        ]
+
+    def reset_settings(self): # <<< MÓDOSÍTÁS: A metódus újra bekerült
+        """Visszaállítja a ciklusok és az időtartam értékét a kezdő (4-4) értékre."""
+        self.cycles_var.set(4)
+        self.duration_var.set(4)
+
+    def _adjust_value(self, variable: tk.IntVar, amount: int, min_val: int = 1):
+        """Növeli vagy csökkenti a megadott tk.IntVar értékét, de nem megy min_val alá."""
+        new_value = variable.get() + amount
+        if new_value < min_val:
+            new_value = min_val
+        variable.set(new_value)
+
+    def _validate_and_update_from_entry(self, variable: tk.IntVar, entry: ctk.CTkEntry, min_val: int = 1):
+        """Validálja az Entry tartalmát, és ha érvényes, frissíti a hozzá tartozó tk.IntVar-t."""
+        try:
+            value = int(entry.get())
+            if value < min_val:
+                value = min_val
+            variable.set(value)
+        except (ValueError, TypeError):
+            pass
+        
+        entry.delete(0, tk.END)
+        entry.insert(0, str(variable.get()))
+
+
+    def _update_entry_from_var(self, var_name, index, mode):
+        """Ha a csúszka vagy gomb megváltoztat egy értéket, frissíti a megfelelő Entry mezőt."""
+        try:
+            if var_name == str(self.cycles_var):
+                current_value = self.cycles_var.get()
+                self.cycles_entry.delete(0, tk.END)
+                self.cycles_entry.insert(0, str(current_value))
+            elif var_name == str(self.duration_var):
+                current_value = self.duration_var.get()
+                self.duration_entry.delete(0, tk.END)
+                self.duration_entry.insert(0, str(current_value))
+        except tk.TclError:
+            pass
 
     def toggle_topmost(self):
         self.master.attributes("-topmost", self.topmost_var.get())
 
-    # --- ÚJ METÓDUS A HANG KÜLÖN SZÁLON VALÓ LEJÁTSZÁSÁHOZ ---
     def _play_sound_in_thread(self):
-        """
-        A hang lejátszása egy külön szálon, hogy a GUI soha ne fagyjon le.
-        Ez a metódus a háttérben fut, és nem zavarja a visszaszámlálót.
-        """
         try:
-            # SND_MEMORY: a hangot a memóriából (a WAV_DATA változóból) játssza le
-            # SND_NODEFAULT: ha a hangfájlunk hibás, ne játssza le a Windows alapértelmezett hangját
             winsound.PlaySound(WAV_DATA, winsound.SND_MEMORY | winsound.SND_NODEFAULT)
         except Exception as e:
-            # Ha a háttérben hiba történik, az ne állítsa le a programot.
-            # A hibakereséshez kiírhatjuk a konzolra.
             print(f"Hiba a hang lejátszása közben (a háttérben): {e}")
 
     def start_exercise(self):
-        # ... (változatlan)
         if self.is_running: return
         self.is_running = True
+        
         self.start_button.configure(state="disabled")
         self.stop_button.configure(state="normal")
-        self.cycles_slider.configure(state="disabled")
-        self.duration_slider.configure(state="disabled")
-        self.topmost_checkbox.configure(state="disabled")
-        self.sound_switch.configure(state="disabled")
+        for widget in self.control_widgets:
+            widget.configure(state="disabled")
+
         self.current_cycle, self.current_phase_index = 1, -1
         self.next_phase()
 
     def stop_exercise(self, interrupted=True):
-        # ... (változatlan)
         if not self.is_running: return
         self.is_running = False
         if self.timer_id:
@@ -146,21 +264,25 @@ class BreathingApp:
             self.cycle_label.configure(text="✅ Befejezve")
             self.status_label.configure(text="Szép munka!")
         self.timer_label.configure(text="")
+
         self.start_button.configure(state="normal")
         self.stop_button.configure(state="disabled")
-        self.cycles_slider.configure(state="normal")
-        self.duration_slider.configure(state="normal")
-        self.topmost_checkbox.configure(state="normal")
-        if SOUND_AVAILABLE: self.sound_switch.configure(state="normal")
+        for widget in self.control_widgets:
+            if widget == self.sound_switch and not SOUND_AVAILABLE:
+                continue
+            widget.configure(state="normal")
 
     def next_phase(self):
-        # ... (változatlan)
         if not self.is_running: return
         self.current_phase_index += 1
         if self.current_phase_index >= len(PHASES):
             self.current_phase_index = 0
             self.current_cycle += 1
+        
+        self._validate_and_update_from_entry(self.cycles_var, self.cycles_entry, min_val=1)
+        self._validate_and_update_from_entry(self.duration_var, self.duration_entry, min_val=1)
         total_cycles = self.cycles_var.get()
+
         if self.current_cycle > total_cycles:
             self.stop_exercise(interrupted=False)
             return
@@ -174,15 +296,9 @@ class BreathingApp:
         if not self.is_running: return
         if self.time_left > 0:
             self.timer_label.configure(text=str(self.time_left))
-            
-            # --- JAVÍTOTT HANG LEJÁTSZÁS ---
             if self.sound_enabled_var.get() and SOUND_AVAILABLE:
-                # Elindítjuk a hang lejátszását egy külön szálon.
-                # A 'daemon=True' biztosítja, hogy a szál bezáródjon a főprogrammal együtt.
                 sound_thread = Thread(target=self._play_sound_in_thread, daemon=True)
                 sound_thread.start()
-
-            # A program azonnal továbblép ide, nem vár a hang lejátszására.
             self.time_left -= 1
             self.timer_id = self.master.after(1000, self.update_timer)
         else:
@@ -190,7 +306,6 @@ class BreathingApp:
             self.timer_id = self.master.after(500, self.next_phase)
 
     def on_closing(self):
-        # ... (változatlan)
         if self.is_running: self.stop_exercise(interrupted=False)
         if self.timer_id: self.master.after_cancel(self.timer_id)
         self.master.destroy()
@@ -206,7 +321,6 @@ if __name__ == "__main__":
     try:
         main()
     except Exception as e:
-        # ... (hibakezelő kód változatlan)
         error_title = "Váratlan Hiba"
         error_details = traceback.format_exc()
         error_message = ("Sajnáljuk, egy váratlan hiba történt a program futása közben.\n\n" f"Hiba típusa: {type(e).__name__}\n" f"Hiba üzenete: {e}\n\n" "Részletek (hibakereséshez):\n" f"{error_details}")
