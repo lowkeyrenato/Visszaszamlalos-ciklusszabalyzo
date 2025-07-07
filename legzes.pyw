@@ -11,11 +11,15 @@ from threading import Thread
 
 # by lowkeyrenato w/ Gemini
 
-# --- MEGBÍZHATÓ HANGKEZELÉS KÜLSŐ FÁJL NÉLKÜL ---
+# --- PLATFORMFÜGGETLEN HANGKEZELÉS KÜLSŐ FÁJL NÉLKÜL ---
+import io
 try:
-    import winsound
+    import pygame
+    # Azért inicializáljuk itt, hogy azonnal kiderüljön, ha valami gond van a hangrendszerrel.
+    pygame.mixer.init() 
     SOUND_AVAILABLE = True
-except ImportError:
+except (ImportError, pygame.error) as e:
+    print(f"Figyelmeztetés: a pygame hangkezelő nem indítható el. A hang funkció nem elérhető. Hiba: {e}")
     SOUND_AVAILABLE = False
 
 # Beágyazott WAV hangadatok
@@ -160,7 +164,7 @@ class BreathingApp:
         if not SOUND_AVAILABLE:
             self.sound_switch.configure(state="disabled")
             # A figyelmeztető szöveg a 3-as oszlop alá kerül, így a switch alatt marad
-            ctk.CTkLabel(options_frame, text="(Csak Windows)", font=ctk.CTkFont(size=10)).grid(row=1, column=2, sticky="e", padx=5)
+            ctk.CTkLabel(options_frame, text="(Hang nem elérhető)", font=ctk.CTkFont(size=10)).grid(row=1, column=2, sticky="e", padx=5)
 
 
         # --- FŐ KIJELZŐK ÉS GOMBOK ---
@@ -234,9 +238,22 @@ class BreathingApp:
         self.master.attributes("-topmost", self.topmost_var.get())
 
     def _play_sound_in_thread(self):
+        """
+        A hang lejátszása egy külön szálon a pygame segítségével,
+        ami a GUI-t soha nem fagyasztja le.
+        """
         try:
-            winsound.PlaySound(WAV_DATA, winsound.SND_MEMORY | winsound.SND_NODEFAULT)
+            # Létrehozunk egy memóriabeli "fájlt" a WAV adatokból
+            sound_file = io.BytesIO(WAV_DATA)
+            # Betöltjük a hangot a memóriabeli fájlból
+            sound = pygame.mixer.Sound(file=sound_file)
+            # Lejátsszuk a hangot
+            sound.play()
+            # Várunk, amíg a hang lejátszása befejeződik, hogy a szál ne álljon le idő előtt.
+            while pygame.mixer.get_busy():
+                pygame.time.Clock().tick(10) # Alacsony CPU használatú várakozás
         except Exception as e:
+            # Ha a háttérben hiba történik, az ne állítsa le a programot.
             print(f"Hiba a hang lejátszása közben (a háttérben): {e}")
 
     def start_exercise(self):
