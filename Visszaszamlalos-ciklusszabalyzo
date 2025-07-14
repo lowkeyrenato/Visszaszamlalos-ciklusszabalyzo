@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # HOGYAN FUTTASD A FEKETE PARANCSSORI ABLAK (CMD) NÉLKÜL:
-# Egyszerűen nevezd át ezt a fájlt 'legzes.py'-ról 'legzes.pyw'-ra.
+# Egyszerűen nevezd át ezt a fájlt 'nev.py'-ról 'nev.pyw'-ra.
 
 import sys
 import tkinter as tk
@@ -39,12 +39,12 @@ except ImportError:
         print(f"HIBA: {error_title}\n{error_message}")
     sys.exit(1)
 
-PHASES = [("Belégzés", "🌬️"), ("Tartsd bent", "⏸️"), ("Kilégzés", "😮‍💨"), ("Tartsd kint", "⏳")]
+PHASES = [("1. fázis", "<->"), ("2. fázis", "<-->"), ("3. fázis", "<--->"), ("4. fázis", "<---->")]
 
 class BreathingApp:
     def __init__(self, master: ctk.CTk):
         self.master = master
-        self.master.title("Box Légzésgyakorlat")
+        self.master.title("Visszaszámlálós ciklusszabályzó")
 
         window_width, window_height = 450, 620 # <<< MÓDOSÍTÁS: Ablak magassága optimalizálva
         screen_width, screen_height = self.master.winfo_screenwidth(), self.master.winfo_screenheight()
@@ -64,7 +64,7 @@ class BreathingApp:
         self.duration_var = tk.IntVar(value=4)
 
         if not PHASES:
-            messagebox.showerror("Konfigurációs Hiba", "A légzési fázisok (PHASES) listája üres!")
+            messagebox.showerror("Konfigurációs Hiba", "A fázisok (PHASES) listája üres!")
             self.master.after(100, self.master.destroy)
             return
 
@@ -172,7 +172,7 @@ class BreathingApp:
         self.cycle_label = ctk.CTkLabel(self.master, text="Nyomj Start-ot az indításhoz!", font=ctk.CTkFont(size=18, weight="bold"))
         self.cycle_label.grid(row=2, column=0, padx=20, pady=(20, 5), sticky="ew")
 
-        self.status_label = ctk.CTkLabel(self.master, text="Készen állsz?", font=ctk.CTkFont(size=30))
+        self.status_label = ctk.CTkLabel(self.master, text="", font=ctk.CTkFont(size=30))
         self.status_label.grid(row=3, column=0, padx=20, pady=10, sticky="ew")
 
         self.timer_label = ctk.CTkLabel(self.master, text="", font=ctk.CTkFont(size=96, weight="bold"), text_color="#5E81AC")
@@ -277,10 +277,10 @@ class BreathingApp:
             self.timer_id = None
         if interrupted:
             self.cycle_label.configure(text="⛔ Megszakítva")
-            self.status_label.configure(text="A nyugalom erő. - Gemini")
+            self.status_label.configure(text="")
         else:
             self.cycle_label.configure(text="✅ Befejezve")
-            self.status_label.configure(text="Szép munka!")
+            self.status_label.configure(text="")
         self.timer_label.configure(text="")
 
         self.start_button.configure(state="normal")
