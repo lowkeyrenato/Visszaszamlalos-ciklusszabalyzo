@@ -1,11 +1,11 @@
-# Box/Négyzet Légzésgyakorlat py app
+# Visszaszamlalos-ciklusszabalyzo python app project
 
 Ez egy github-ra szánt teszt python project
 ---
 
 ## Főbb jellemzők
 
-- Testreszabható ciklusszám és fázisidők  
+- Testreszabható ciklusszám visszaszánlálóval és fázisidőkkel  
 - Szép, modern felület a [CustomTkinter](https://github.com/TomSchimansky/CustomTkinter) könyvtárral  
 - Hangjelzés a légzés fázisváltásnál | [pygame](https://github.com/pygame/pygame) könyvtárral
 - Könnyű indítás Windows rendszeren, `.pyw` kiterjesztéssel parancssori ablak nélkül  
@@ -19,11 +19,11 @@ Ez egy github-ra szánt teszt python project
 1. Klónozd vagy töltsd le a repót:
 
 ```bash
-git clone https://github.com/lowkeyrenato/Legzesgyarkorlat-python-project.git
+git clone https://github.com/lowkeyrenato/Visszaszamlalos-ciklusszabalyzo.git
 ```
 2. Lépj be a mappába:
 ```bash
-cd Legzesgyarkorlat-python-project
+cd Visszaszamlalos-ciklusszabalyzo
 ```
 4. elepítsd a szükséges függőségeket a requirements.txt alapján:
 ```bash
