@@ -42,7 +42,7 @@ except ImportError:
 class BreathingApp:
     def __init__(self, master: ctk.CTk):
         self.master = master
-        self.master.title("Visszaszámlálós ciklusszabályzó")
+        self.master.title("Visszaszámlálós ciklus- és fázisszabályzó")
 
         # <<< MÓDOSÍTÁS: Az ablak mérete a több vezérlőhöz igazítva
         window_width, window_height = 550, 650
