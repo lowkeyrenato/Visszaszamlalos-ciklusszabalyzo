@@ -23,7 +23,7 @@ git clone https://github.com/lowkeyrenato/Visszaszamlalos-ciklusszabalyzo.git
 ```
 2. Lépj be a mappába:
 ```bash
-cd Visszaszamlalos-ciklusszabalyzo
+cd countdown-sequencer.pyw
 ```
 4. elepítsd a szükséges függőségeket a requirements.txt alapján:
 ```bash
