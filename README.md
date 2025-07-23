@@ -1,4 +1,4 @@
-# Visszaszámlálós ciklus- és fázisszabályzó python app project
+# Visszaszámlálós ciklus- és fázisszabályzó
 
 Ez egy github-ra szánt teszt python project
 ---
