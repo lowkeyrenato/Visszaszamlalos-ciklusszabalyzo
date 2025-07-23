@@ -19,7 +19,7 @@ Ez egy github-ra szánt teszt python project
 1. Klónozd vagy töltsd le a repót:
 
 ```bash
-git clone https://github.com/lowkeyrenato/Visszaszamlalos-ciklusszabalyzo.git
+git clone https://github.com/lowkeyrenato/countdown-sequencer.git
 ```
 2. Lépj be a mappába:
 ```bash
