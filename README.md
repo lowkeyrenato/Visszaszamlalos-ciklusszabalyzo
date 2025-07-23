@@ -1,5 +1,4 @@
 # Visszaszámlálós ciklus- és fázisszabályzó
-🇺🇸 Countdown Sequencer
 
 Ez egy github-ra szánt teszt python project
 ---
