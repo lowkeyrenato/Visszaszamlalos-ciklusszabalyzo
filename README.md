@@ -5,7 +5,7 @@ Ez egy github-ra szánt teszt python project
 
 ## Főbb jellemzők
 
-- Testreszabható ciklusszám visszaszánlálóval és fázisidőkkel  
+- Testreszabható ciklusszám visszaszámlálóval és fázisidőkkel  
 - Szép, modern felület a [CustomTkinter](https://github.com/TomSchimansky/CustomTkinter) könyvtárral  
 - Hangjelzés a légzés fázisváltásnál | [pygame](https://github.com/pygame/pygame) könyvtárral
 - Könnyű indítás Windows rendszeren, `.pyw` kiterjesztéssel parancssori ablak nélkül  
